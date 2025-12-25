@@ -4,7 +4,7 @@ Ce fichier contient tous les scripts de test Postman prêts à copier-coller pou
 
 ---
 
-## 📋 Table des Matières
+## Table des Matières
 
 1. [Scripts Globaux](#scripts-globaux)
 2. [Authentification](#authentification)
@@ -804,7 +804,7 @@ pm.test("Forbidden message is present", function () {
 
 ---
 
-## 🚀 Utilisation
+## Utilisation
 
 1. **Copiez** le script correspondant à votre endpoint
 2. **Collez-le** dans l'onglet "Tests" de votre requête Postman
@@ -813,7 +813,7 @@ pm.test("Forbidden message is present", function () {
 
 ---
 
-## 📝 Notes
+## Notes
 
 - Tous les scripts vérifient automatiquement le statut HTTP, le format JSON et la structure des données
 - Les IDs sont sauvegardés automatiquement dans les variables d'environnement
@@ -822,7 +822,7 @@ pm.test("Forbidden message is present", function () {
 
 ---
 
-## 🔄 Exécution Automatique avec Newman
+## Exécution Automatique avec Newman
 
 ```bash
 # Installer Newman
