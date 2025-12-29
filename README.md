@@ -23,6 +23,53 @@ Content-Type: application/json
 
 ---
 
+## 📋 Liste Complète de Tous les Endpoints
+
+### 🔐 Authentification
+- **POST** `/api/auth/register` - Enregistrer un nouvel utilisateur
+- **POST** `/api/auth/login` - Se connecter et obtenir un token JWT
+
+### 📦 Catégories
+- **POST** `/api/categories/add` - Créer une catégorie (ADMIN seulement)
+- **GET** `/api/categories/all` - Obtenir toutes les catégories
+- **GET** `/api/categories/{id}` - Obtenir une catégorie par ID
+- **PUT** `/api/categories/update/{id}` - Mettre à jour une catégorie (ADMIN seulement)
+- **DELETE** `/api/categories/delete/{id}` - Supprimer une catégorie (ADMIN seulement)
+
+### 🛍️ Produits
+- **POST** `/api/products/add` - Créer un produit (ADMIN seulement)
+- **PUT** `/api/products/update` - Mettre à jour un produit (ADMIN seulement)
+- **GET** `/api/products/all` - Obtenir tous les produits
+- **GET** `/api/products/{id}` - Obtenir un produit par ID
+- **GET** `/api/products/search?input={term}` - Rechercher des produits
+- **DELETE** `/api/products/delete/{id}` - Supprimer un produit (ADMIN seulement)
+
+### 🏢 Fournisseurs
+- **POST** `/api/suppliers/add` - Ajouter un fournisseur (ADMIN seulement)
+- **GET** `/api/suppliers/all` - Obtenir tous les fournisseurs
+- **GET** `/api/suppliers/{id}` - Obtenir un fournisseur par ID
+- **PUT** `/api/suppliers/update/{id}` - Mettre à jour un fournisseur (ADMIN seulement)
+- **DELETE** `/api/suppliers/delete/{id}` - Supprimer un fournisseur (ADMIN seulement)
+
+### 💰 Transactions
+- **POST** `/api/transactions/purchase` - Créer une transaction d'achat
+- **POST** `/api/transactions/sell` - Créer une transaction de vente
+- **POST** `/api/transactions/return` - Retourner un produit au fournisseur
+- **GET** `/api/transactions/all?page={page}&size={size}&filter={filter}` - Obtenir toutes les transactions
+- **GET** `/api/transactions/{id}` - Obtenir une transaction par ID
+- **GET** `/api/transactions/by-month-year?month={month}&year={year}` - Obtenir les transactions par mois/année
+- **PUT** `/api/transactions/{transactionId}` - Mettre à jour le statut d'une transaction
+
+### 👥 Utilisateurs
+- **GET** `/api/users/all` - Obtenir tous les utilisateurs (ADMIN seulement)
+- **GET** `/api/users/{id}` - Obtenir un utilisateur par ID
+- **GET** `/api/users/current` - Obtenir l'utilisateur actuellement connecté
+- **GET** `/api/users/transactions/{userId}` - Obtenir les transactions d'un utilisateur
+- **PUT** `/api/users/update/{id}` - Mettre à jour un utilisateur
+- **DELETE** `/api/users/delete/{id}` - Supprimer un utilisateur (ADMIN seulement)
+
+---
+
 ## 1. Authentification
 
 ### 1.1. Register User
@@ -1804,6 +1851,112 @@ pm.test("Search results match query", function () {
 
 ---
 
+#### 3.5. Update Product - Scripts de Test
+
+**Pre-request Script** :
+```javascript
+// Vérifier si le token existe
+if (!pm.environment.get("token")) {
+    pm.test.skip("Token not found - skipping test");
+    console.log("Warning: No token found. Please login first.");
+}
+
+// Vérifier si productId existe
+if (!pm.environment.get("productId")) {
+    console.log("Warning: No productId found. Using default value 1");
+    pm.environment.set("productId", "1");
+}
+```
+
+**Tests Tab** :
+```javascript
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier le message de succès
+pm.test("Product update message is correct", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+    pm.expect(jsonData.message).to.eql("Product Updated successfully");
+});
+
+// Test 4: Vérifier la structure de la réponse
+pm.test("Response has status and message", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('status');
+    pm.expect(jsonData).to.have.property('message');
+});
+
+// Test 5: Vérifier que le produit a été mis à jour
+pm.test("Product was updated successfully", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+    console.log("Product updated successfully");
+});
+```
+
+---
+
+#### 3.6. Delete Product - Scripts de Test
+
+**Pre-request Script** :
+```javascript
+// Vérifier si le token existe
+if (!pm.environment.get("token")) {
+    pm.test.skip("Token not found - skipping test");
+    console.log("Warning: No token found. Please login first.");
+}
+
+// Vérifier si productId existe
+if (!pm.environment.get("productId")) {
+    console.log("Warning: No productId found. Using default value 1");
+    pm.environment.set("productId", "1");
+}
+```
+
+**Tests Tab** :
+```javascript
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier le message de succès
+pm.test("Product delete message is correct", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+    pm.expect(jsonData.message).to.eql("Product Deleted successfully");
+});
+
+// Test 4: Vérifier la structure de la réponse
+pm.test("Response has status and message", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('status');
+    pm.expect(jsonData).to.have.property('message');
+});
+
+// Test 5: Vérifier que le produit est supprimé
+pm.test("Product should be deleted", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+    console.log("Product deleted successfully");
+});
+```
+
+---
+
 #### 4.1. Add Supplier - Scripts de Test
 
 **Tests Tab** :
@@ -1975,6 +2128,77 @@ pm.test("Transaction has required fields", function () {
 
 ---
 
+#### 5.5. Get Transactions By Month and Year - Scripts de Test
+
+**Tests Tab** :
+```javascript
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier la structure de la réponse
+pm.test("Response contains transactions array", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('transactions');
+    pm.expect(jsonData.transactions).to.be.an('array');
+});
+
+// Test 4: Vérifier que les transactions correspondent au mois/année demandé
+pm.test("Transactions match requested month and year", function () {
+    var jsonData = pm.response.json();
+    var month = parseInt(pm.request.url.query.get("month"));
+    var year = parseInt(pm.request.url.query.get("year"));
+    
+    if (jsonData.transactions && jsonData.transactions.length > 0) {
+        var transaction = jsonData.transactions[0];
+        if (transaction.createdAt) {
+            var transactionDate = new Date(transaction.createdAt);
+            pm.expect(transactionDate.getMonth() + 1).to.eql(month);
+            pm.expect(transactionDate.getFullYear()).to.eql(year);
+        }
+    }
+});
+```
+
+---
+
+#### 5.6. Update Transaction Status - Scripts de Test
+
+**Tests Tab** :
+```javascript
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier le message de succès
+pm.test("Transaction status update message is correct", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+    pm.expect(jsonData.message).to.eql("Transaction Status Successfully Updated");
+});
+
+// Test 4: Vérifier la structure de la réponse
+pm.test("Response has status and message", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('status');
+    pm.expect(jsonData).to.have.property('message');
+});
+```
+
+---
+
 #### 6.1. Get All Users - Scripts de Test
 
 **Tests Tab** :
@@ -2011,7 +2235,167 @@ pm.test("Users have required fields", function () {
 
 ---
 
-#### 6.2. Get Current User - Scripts de Test
+#### 6.2. Get User By ID - Scripts de Test
+
+**Tests Tab** :
+```javascript
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier la structure de la réponse
+pm.test("Response contains user object", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('status');
+    pm.expect(jsonData).to.have.property('user');
+    pm.expect(jsonData.user).to.be.an('object');
+});
+
+// Test 4: Vérifier les champs de l'utilisateur
+pm.test("User has required fields", function () {
+    var jsonData = pm.response.json();
+    var user = jsonData.user;
+    pm.expect(user).to.have.property('id');
+    pm.expect(user).to.have.property('name');
+    pm.expect(user).to.have.property('email');
+    pm.expect(user).to.have.property('role');
+});
+
+// Test 5: Vérifier que l'ID correspond
+pm.test("User ID matches request", function () {
+    var jsonData = pm.response.json();
+    var urlParts = pm.request.url.toString().split('/');
+    var requestedId = urlParts[urlParts.length - 1];
+    pm.expect(jsonData.user.id.toString()).to.eql(requestedId);
+});
+```
+
+---
+
+#### 6.3. Update User - Scripts de Test
+
+**Tests Tab** :
+```javascript
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier le message de succès
+pm.test("User update message is correct", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+    pm.expect(jsonData.message).to.eql("User successfully updated");
+});
+
+// Test 4: Vérifier la structure de la réponse
+pm.test("Response has status and message", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('status');
+    pm.expect(jsonData).to.have.property('message');
+});
+```
+
+---
+
+#### 6.4. Delete User - Scripts de Test
+
+**Pre-request Script** :
+```javascript
+// Vérifier si le token existe
+if (!pm.environment.get("token")) {
+    pm.test.skip("Token not found - skipping test");
+    console.log("Warning: No token found. Please login first.");
+}
+```
+
+**Tests Tab** :
+```javascript
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier le message de succès
+pm.test("User delete message is correct", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+    pm.expect(jsonData.message).to.eql("User successfully Deleted");
+});
+
+// Test 4: Vérifier la structure de la réponse
+pm.test("Response has status and message", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('status');
+    pm.expect(jsonData).to.have.property('message');
+});
+```
+
+---
+
+#### 6.5. Get User Transactions - Scripts de Test
+
+**Tests Tab** :
+```javascript
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier la structure de la réponse
+pm.test("Response contains user and transactions", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('status');
+    pm.expect(jsonData).to.have.property('user');
+    pm.expect(jsonData.user).to.have.property('transactions');
+    pm.expect(jsonData.user.transactions).to.be.an('array');
+});
+
+// Test 4: Vérifier les champs de l'utilisateur
+pm.test("User has required fields", function () {
+    var jsonData = pm.response.json();
+    var user = jsonData.user;
+    pm.expect(user).to.have.property('id');
+    pm.expect(user).to.have.property('name');
+    pm.expect(user).to.have.property('email');
+});
+
+// Test 5: Vérifier la structure des transactions
+pm.test("Transactions have required fields", function () {
+    var jsonData = pm.response.json();
+    if (jsonData.user.transactions && jsonData.user.transactions.length > 0) {
+        var transaction = jsonData.user.transactions[0];
+        pm.expect(transaction).to.have.property('id');
+        pm.expect(transaction).to.have.property('transactionType');
+        pm.expect(transaction).to.have.property('status');
+    }
+});
+```
+
+---
+
+#### 6.6. Get Current User - Scripts de Test
 
 **Tests Tab** :
 ```javascript
@@ -2039,6 +2423,13 @@ pm.test("User email matches token", function () {
     // L'email devrait correspondre à celui utilisé pour le login
     pm.expect(jsonData.email).to.be.a('string');
     pm.expect(jsonData.email).to.include('@');
+});
+
+// Test 5: Vérifier les champs requis
+pm.test("User has required fields", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('role');
+    pm.expect(jsonData).to.have.property('phoneNumber');
 });
 ```
 
