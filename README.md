@@ -113,6 +113,39 @@ Content-Type: application/json
 }
 ```
 
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier la structure de la réponse
+pm.test("Response has status and message", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('status');
+    pm.expect(jsonData).to.have.property('message');
+    pm.expect(jsonData).to.have.property('timestamp');
+});
+
+// Test 4: Vérifier le message de succès
+pm.test("Registration message is correct", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+    pm.expect(jsonData.message).to.eql("User was successfully registered");
+});
+
+// Test 5: Vérifier le temps de réponse
+pm.test("Response time is less than 2000ms", function () {
+    pm.expect(pm.response.responseTime).to.be.below(2000);
+});
+```
+
 ---
 
 ### 1.2. Login User
@@ -152,13 +185,53 @@ Content-Type: application/json
 }
 ```
 
-**Script Postman (Tests)** :
+**Scripts Postman (Tests Tab)** :
 ```javascript
-if (pm.response.code === 200) {
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier la présence du token
+pm.test("Response contains token", function () {
     var jsonData = pm.response.json();
-    pm.environment.set("token", jsonData.token);
-    console.log("Token saved:", jsonData.token);
-}
+    pm.expect(jsonData).to.have.property('token');
+    pm.expect(jsonData.token).to.be.a('string');
+    pm.expect(jsonData.token.length).to.be.above(0);
+});
+
+// Test 4: Sauvegarder le token dans l'environnement
+pm.test("Save token to environment", function () {
+    var jsonData = pm.response.json();
+    if (jsonData.token) {
+        pm.environment.set("token", jsonData.token);
+        pm.environment.set("userRole", jsonData.role);
+        console.log("Token saved:", jsonData.token);
+        console.log("User role:", jsonData.role);
+    }
+});
+
+// Test 5: Vérifier le message de succès
+pm.test("Login message is correct", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+    pm.expect(jsonData.message).to.eql("User Logged in Successfully");
+    pm.expect(jsonData.role).to.be.a('string');
+    pm.expect(jsonData.expirationTime).to.eql("6 months");
+});
+
+// Test 6: Vérifier le format du token JWT
+pm.test("Token is valid JWT format", function () {
+    var jsonData = pm.response.json();
+    var token = jsonData.token;
+    var parts = token.split('.');
+    pm.expect(parts.length).to.eql(3);
+});
 ```
 
 ---
@@ -211,6 +284,47 @@ Content-Type: application/json
 }
 ```
 
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Pre-request Script: Vérifier si le token existe
+if (!pm.environment.get("token")) {
+    console.log("Warning: No token found. Please login first.");
+}
+
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier la structure de la réponse
+pm.test("Response has status and message", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('status');
+    pm.expect(jsonData).to.have.property('message');
+});
+
+// Test 4: Vérifier le message de succès
+pm.test("Category creation message is correct", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+    pm.expect(jsonData.message).to.eql("Category Saved Successfully");
+});
+
+// Test 5: Sauvegarder l'ID de la catégorie créée
+pm.test("Save category ID if returned", function () {
+    var jsonData = pm.response.json();
+    if (jsonData.category && jsonData.category.id) {
+        pm.environment.set("categoryId", jsonData.category.id);
+        console.log("Category ID saved:", jsonData.category.id);
+    }
+});
+```
+
 ---
 
 ### 2.2. Get All Categories
@@ -242,6 +356,47 @@ Content-Type: application/json
 }
 ```
 
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier la structure de la réponse
+pm.test("Response contains categories array", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('status');
+    pm.expect(jsonData).to.have.property('message');
+    pm.expect(jsonData).to.have.property('categories');
+    pm.expect(jsonData.categories).to.be.an('array');
+});
+
+// Test 4: Vérifier le message de succès
+pm.test("Success message is correct", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+    pm.expect(jsonData.message).to.eql("success");
+});
+
+// Test 5: Vérifier la structure des catégories
+pm.test("Categories have required fields", function () {
+    var jsonData = pm.response.json();
+    if (jsonData.categories && jsonData.categories.length > 0) {
+        var category = jsonData.categories[0];
+        pm.expect(category).to.have.property('id');
+        pm.expect(category).to.have.property('name');
+        pm.expect(category.id).to.be.a('number');
+        pm.expect(category.name).to.be.a('string');
+    }
+});
+```
+
 ---
 
 ### 2.3. Get Category By ID
@@ -271,6 +426,45 @@ Content-Type: application/json
     },
     "timestamp": "2024-01-15T10:30:00"
 }
+```
+
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier la structure de la réponse
+pm.test("Response contains category object", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('status');
+    pm.expect(jsonData).to.have.property('category');
+    pm.expect(jsonData.category).to.be.an('object');
+});
+
+// Test 4: Vérifier les champs de la catégorie
+pm.test("Category has required fields", function () {
+    var jsonData = pm.response.json();
+    var category = jsonData.category;
+    pm.expect(category).to.have.property('id');
+    pm.expect(category).to.have.property('name');
+    pm.expect(category.id).to.be.a('number');
+    pm.expect(category.name).to.be.a('string');
+});
+
+// Test 5: Vérifier que l'ID correspond
+pm.test("Category ID matches request", function () {
+    var jsonData = pm.response.json();
+    var urlParts = pm.request.url.toString().split('/');
+    var requestedId = urlParts[urlParts.length - 1];
+    pm.expect(jsonData.category.id.toString()).to.eql(requestedId);
+});
 ```
 
 ---
@@ -313,6 +507,38 @@ Content-Type: application/json
 }
 ```
 
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Pre-request Script: Vérifier si le token existe
+if (!pm.environment.get("token")) {
+    console.log("Warning: No token found. Please login first.");
+}
+
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier le message de succès
+pm.test("Update message is correct", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+    pm.expect(jsonData.message).to.eql("Category Was Successfully Updated");
+});
+
+// Test 4: Vérifier la structure de la réponse
+pm.test("Response has status and message", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('status');
+    pm.expect(jsonData).to.have.property('message');
+});
+```
+
 ---
 
 ### 2.5. Delete Category (ADMIN only)
@@ -337,6 +563,37 @@ Content-Type: application/json
     "message": "Category Was Successfully Deleted",
     "timestamp": "2024-01-15T10:30:00"
 }
+```
+
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Pre-request Script: Vérifier si le token existe
+if (!pm.environment.get("token")) {
+    console.log("Warning: No token found. Please login first.");
+}
+
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier le message de succès
+pm.test("Delete message is correct", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+    pm.expect(jsonData.message).to.eql("Category Was Successfully Deleted");
+});
+
+// Test 4: Vérifier que la catégorie est supprimée
+pm.test("Category should be deleted", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+});
 ```
 
 ---
@@ -396,6 +653,40 @@ description: Latest iPhone with A17 Pro chip and titanium design
 }
 ```
 
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Pre-request Script: Vérifier si le token existe
+if (!pm.environment.get("token")) {
+    console.log("Warning: No token found. Please login first.");
+}
+
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier le message de succès
+pm.test("Product creation message is correct", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+    pm.expect(jsonData.message).to.eql("Product successfully saved");
+});
+
+// Test 4: Sauvegarder l'ID du produit créé
+pm.test("Save product ID if returned", function () {
+    var jsonData = pm.response.json();
+    if (jsonData.product && jsonData.product.id) {
+        pm.environment.set("productId", jsonData.product.id);
+        console.log("Product ID saved:", jsonData.product.id);
+    }
+});
+```
+
 ---
 
 ### 3.2. Update Product (ADMIN only)
@@ -444,6 +735,51 @@ description: Updated laptop with improved specifications
 }
 ```
 
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Pre-request Script: Vérifier si le token existe
+if (!pm.environment.get("token")) {
+    console.log("Warning: No token found. Please login first.");
+}
+
+// Vérifier si productId existe
+if (!pm.environment.get("productId")) {
+    console.log("Warning: No productId found. Using default value 1");
+    pm.environment.set("productId", "1");
+}
+
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier le message de succès
+pm.test("Product update message is correct", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+    pm.expect(jsonData.message).to.eql("Product Updated successfully");
+});
+
+// Test 4: Vérifier la structure de la réponse
+pm.test("Response has status and message", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('status');
+    pm.expect(jsonData).to.have.property('message');
+});
+
+// Test 5: Vérifier que le produit a été mis à jour
+pm.test("Product was updated successfully", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+    console.log("Product updated successfully");
+});
+```
+
 ---
 
 ### 3.3. Get All Products
@@ -475,6 +811,40 @@ Content-Type: application/json
     ],
     "timestamp": "2024-01-15T10:30:00"
 }
+```
+
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier la structure de la réponse
+pm.test("Response contains products array", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('status');
+    pm.expect(jsonData).to.have.property('products');
+    pm.expect(jsonData.products).to.be.an('array');
+});
+
+// Test 4: Vérifier la structure des produits
+pm.test("Products have required fields", function () {
+    var jsonData = pm.response.json();
+    if (jsonData.products && jsonData.products.length > 0) {
+        var product = jsonData.products[0];
+        pm.expect(product).to.have.property('id');
+        pm.expect(product).to.have.property('name');
+        pm.expect(product).to.have.property('sku');
+        pm.expect(product).to.have.property('price');
+        pm.expect(product).to.have.property('stockQuantity');
+    }
+});
 ```
 
 ---
@@ -513,6 +883,37 @@ Content-Type: application/json
 }
 ```
 
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier la structure de la réponse
+pm.test("Response contains product object", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('product');
+    pm.expect(jsonData.product).to.be.an('object');
+});
+
+// Test 4: Vérifier les champs du produit
+pm.test("Product has required fields", function () {
+    var jsonData = pm.response.json();
+    var product = jsonData.product;
+    pm.expect(product).to.have.property('id');
+    pm.expect(product).to.have.property('name');
+    pm.expect(product).to.have.property('sku');
+    pm.expect(product).to.have.property('price');
+    pm.expect(product).to.have.property('stockQuantity');
+});
+```
+
 ---
 
 ### 3.5. Delete Product (ADMIN only)
@@ -537,6 +938,51 @@ Content-Type: application/json
     "message": "Product Deleted successfully",
     "timestamp": "2024-01-15T10:30:00"
 }
+```
+
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Pre-request Script: Vérifier si le token existe
+if (!pm.environment.get("token")) {
+    console.log("Warning: No token found. Please login first.");
+}
+
+// Vérifier si productId existe
+if (!pm.environment.get("productId")) {
+    console.log("Warning: No productId found. Using default value 1");
+    pm.environment.set("productId", "1");
+}
+
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier le message de succès
+pm.test("Product delete message is correct", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+    pm.expect(jsonData.message).to.eql("Product Deleted successfully");
+});
+
+// Test 4: Vérifier la structure de la réponse
+pm.test("Response has status and message", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('status');
+    pm.expect(jsonData).to.have.property('message');
+});
+
+// Test 5: Vérifier que le produit est supprimé
+pm.test("Product should be deleted", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+    console.log("Product deleted successfully");
+});
 ```
 
 ---
@@ -578,6 +1024,38 @@ Content-Type: application/json
     ],
     "timestamp": "2024-01-15T10:30:00"
 }
+```
+
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier la structure de la réponse
+pm.test("Response contains products array", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('products');
+    pm.expect(jsonData.products).to.be.an('array');
+});
+
+// Test 4: Vérifier que les résultats correspondent à la recherche
+pm.test("Search results match query", function () {
+    var jsonData = pm.response.json();
+    var searchInput = pm.request.url.query.get("input");
+    if (jsonData.products && jsonData.products.length > 0) {
+        var product = jsonData.products[0];
+        var nameMatch = product.name.toLowerCase().includes(searchInput.toLowerCase());
+        var descMatch = product.description && product.description.toLowerCase().includes(searchInput.toLowerCase());
+        pm.expect(nameMatch || descMatch).to.be.true;
+    }
+});
 ```
 
 ---
@@ -632,6 +1110,40 @@ Content-Type: application/json
 }
 ```
 
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Pre-request Script: Vérifier si le token existe
+if (!pm.environment.get("token")) {
+    console.log("Warning: No token found. Please login first.");
+}
+
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier le message de succès
+pm.test("Supplier creation message is correct", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+    pm.expect(jsonData.message).to.eql("Supplier Saved Successfully");
+});
+
+// Test 4: Sauvegarder l'ID du fournisseur créé
+pm.test("Save supplier ID if returned", function () {
+    var jsonData = pm.response.json();
+    if (jsonData.supplier && jsonData.supplier.id) {
+        pm.environment.set("supplierId", jsonData.supplier.id);
+        console.log("Supplier ID saved:", jsonData.supplier.id);
+    }
+});
+```
+
 ---
 
 ### 4.2. Get All Suppliers
@@ -659,6 +1171,38 @@ Content-Type: application/json
     ],
     "timestamp": "2024-01-15T10:30:00"
 }
+```
+
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier la structure de la réponse
+pm.test("Response contains suppliers array", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('status');
+    pm.expect(jsonData).to.have.property('suppliers');
+    pm.expect(jsonData.suppliers).to.be.an('array');
+});
+
+// Test 4: Vérifier la structure des fournisseurs
+pm.test("Suppliers have required fields", function () {
+    var jsonData = pm.response.json();
+    if (jsonData.suppliers && jsonData.suppliers.length > 0) {
+        var supplier = jsonData.suppliers[0];
+        pm.expect(supplier).to.have.property('id');
+        pm.expect(supplier).to.have.property('name');
+        pm.expect(supplier).to.have.property('contactInfo');
+    }
+});
 ```
 
 ---
@@ -690,6 +1234,35 @@ Content-Type: application/json
     },
     "timestamp": "2024-01-15T10:30:00"
 }
+```
+
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier la structure de la réponse
+pm.test("Response contains supplier object", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('supplier');
+    pm.expect(jsonData.supplier).to.be.an('object');
+});
+
+// Test 4: Vérifier les champs du fournisseur
+pm.test("Supplier has required fields", function () {
+    var jsonData = pm.response.json();
+    var supplier = jsonData.supplier;
+    pm.expect(supplier).to.have.property('id');
+    pm.expect(supplier).to.have.property('name');
+    pm.expect(supplier).to.have.property('contactInfo');
+});
 ```
 
 ---
@@ -735,6 +1308,31 @@ Content-Type: application/json
 }
 ```
 
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Pre-request Script: Vérifier si le token existe
+if (!pm.environment.get("token")) {
+    console.log("Warning: No token found. Please login first.");
+}
+
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier le message de succès
+pm.test("Supplier update message is correct", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+    pm.expect(jsonData.message).to.eql("Supplier Was Successfully Updated");
+});
+```
+
 ---
 
 ### 4.5. Delete Supplier (ADMIN only)
@@ -759,6 +1357,31 @@ Content-Type: application/json
     "message": "Supplier Was Successfully Deleted",
     "timestamp": "2024-01-15T10:30:00"
 }
+```
+
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Pre-request Script: Vérifier si le token existe
+if (!pm.environment.get("token")) {
+    console.log("Warning: No token found. Please login first.");
+}
+
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier le message de succès
+pm.test("Supplier delete message is correct", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+    pm.expect(jsonData.message).to.eql("Supplier Was Successfully Deleted");
+});
 ```
 
 ---
@@ -819,6 +1442,40 @@ Content-Type: application/json
 }
 ```
 
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Pre-request Script: Vérifier si le token existe
+if (!pm.environment.get("token")) {
+    console.log("Warning: No token found. Please login first.");
+}
+
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier le message de succès
+pm.test("Purchase message is correct", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+    pm.expect(jsonData.message).to.eql("Purchase Made successfully");
+});
+
+// Test 4: Sauvegarder l'ID de la transaction créée
+pm.test("Save transaction ID if returned", function () {
+    var jsonData = pm.response.json();
+    if (jsonData.transaction && jsonData.transaction.id) {
+        pm.environment.set("transactionId", jsonData.transaction.id);
+        console.log("Transaction ID saved:", jsonData.transaction.id);
+    }
+});
+```
+
 ---
 
 ### 5.2. Sell Transaction
@@ -870,6 +1527,31 @@ Content-Type: application/json
     "message": "Product Sale successfully made",
     "timestamp": "2024-01-15T10:30:00"
 }
+```
+
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Pre-request Script: Vérifier si le token existe
+if (!pm.environment.get("token")) {
+    console.log("Warning: No token found. Please login first.");
+}
+
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier le message de succès
+pm.test("Sell message is correct", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+    pm.expect(jsonData.message).to.eql("Product Sale successfully made");
+});
 ```
 
 ---
@@ -928,6 +1610,31 @@ Content-Type: application/json
 }
 ```
 
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Pre-request Script: Vérifier si le token existe
+if (!pm.environment.get("token")) {
+    console.log("Warning: No token found. Please login first.");
+}
+
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier le message de succès
+pm.test("Return message is correct", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+    pm.expect(jsonData.message).to.eql("Product Returned in progress");
+});
+```
+
 ---
 
 ### 5.4. Get All Transactions
@@ -975,6 +1682,53 @@ Content-Type: application/json
     "totalElements": 1,
     "timestamp": "2024-01-15T10:30:00"
 }
+```
+
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Pre-request Script: Vérifier si le token existe
+if (!pm.environment.get("token")) {
+    console.log("Warning: No token found. Please login first.");
+}
+
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier la structure de la réponse
+pm.test("Response contains transactions array", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('transactions');
+    pm.expect(jsonData.transactions).to.be.an('array');
+});
+
+// Test 4: Vérifier la pagination
+pm.test("Response contains pagination info", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('totalPages');
+    pm.expect(jsonData).to.have.property('totalElements');
+    pm.expect(jsonData.totalPages).to.be.a('number');
+    pm.expect(jsonData.totalElements).to.be.a('number');
+});
+
+// Test 5: Vérifier la structure des transactions
+pm.test("Transactions have required fields", function () {
+    var jsonData = pm.response.json();
+    if (jsonData.transactions && jsonData.transactions.length > 0) {
+        var transaction = jsonData.transactions[0];
+        pm.expect(transaction).to.have.property('id');
+        pm.expect(transaction).to.have.property('transactionType');
+        pm.expect(transaction).to.have.property('status');
+        pm.expect(transaction).to.have.property('totalProducts');
+        pm.expect(transaction).to.have.property('totalPrice');
+    }
+});
 ```
 
 ---
@@ -1028,6 +1782,42 @@ Content-Type: application/json
 }
 ```
 
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Pre-request Script: Vérifier si le token existe
+if (!pm.environment.get("token")) {
+    console.log("Warning: No token found. Please login first.");
+}
+
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier la structure de la réponse
+pm.test("Response contains transaction object", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('transaction');
+    pm.expect(jsonData.transaction).to.be.an('object');
+});
+
+// Test 4: Vérifier les champs de la transaction
+pm.test("Transaction has required fields", function () {
+    var jsonData = pm.response.json();
+    var transaction = jsonData.transaction;
+    pm.expect(transaction).to.have.property('id');
+    pm.expect(transaction).to.have.property('transactionType');
+    pm.expect(transaction).to.have.property('status');
+    pm.expect(transaction).to.have.property('totalProducts');
+    pm.expect(transaction).to.have.property('totalPrice');
+});
+```
+
 ---
 
 ### 5.6. Get Transactions By Month and Year
@@ -1068,6 +1858,47 @@ Content-Type: application/json
     ],
     "timestamp": "2024-01-15T10:30:00"
 }
+```
+
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Pre-request Script: Vérifier si le token existe
+if (!pm.environment.get("token")) {
+    console.log("Warning: No token found. Please login first.");
+}
+
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier la structure de la réponse
+pm.test("Response contains transactions array", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('transactions');
+    pm.expect(jsonData.transactions).to.be.an('array');
+});
+
+// Test 4: Vérifier que les transactions correspondent au mois/année demandé
+pm.test("Transactions match requested month and year", function () {
+    var jsonData = pm.response.json();
+    var month = parseInt(pm.request.url.query.get("month"));
+    var year = parseInt(pm.request.url.query.get("year"));
+    
+    if (jsonData.transactions && jsonData.transactions.length > 0) {
+        var transaction = jsonData.transactions[0];
+        if (transaction.createdAt) {
+            var transactionDate = new Date(transaction.createdAt);
+            pm.expect(transactionDate.getMonth() + 1).to.eql(month);
+            pm.expect(transactionDate.getFullYear()).to.eql(year);
+        }
+    }
+});
 ```
 
 ---
@@ -1120,6 +1951,38 @@ Content-Type: application/json
 }
 ```
 
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Pre-request Script: Vérifier si le token existe
+if (!pm.environment.get("token")) {
+    console.log("Warning: No token found. Please login first.");
+}
+
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier le message de succès
+pm.test("Transaction status update message is correct", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+    pm.expect(jsonData.message).to.eql("Transaction Status Successfully Updated");
+});
+
+// Test 4: Vérifier la structure de la réponse
+pm.test("Response has status and message", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('status');
+    pm.expect(jsonData).to.have.property('message');
+});
+```
+
 ---
 
 ## 6. Users
@@ -1154,6 +2017,43 @@ Content-Type: application/json
 }
 ```
 
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Pre-request Script: Vérifier si le token existe
+if (!pm.environment.get("token")) {
+    console.log("Warning: No token found. Please login first.");
+}
+
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier la structure de la réponse
+pm.test("Response contains users array", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('users');
+    pm.expect(jsonData.users).to.be.an('array');
+});
+
+// Test 4: Vérifier la structure des utilisateurs
+pm.test("Users have required fields", function () {
+    var jsonData = pm.response.json();
+    if (jsonData.users && jsonData.users.length > 0) {
+        var user = jsonData.users[0];
+        pm.expect(user).to.have.property('id');
+        pm.expect(user).to.have.property('name');
+        pm.expect(user).to.have.property('email');
+        pm.expect(user).to.have.property('role');
+    }
+});
+```
+
 ---
 
 ### 6.2. Get User By ID
@@ -1186,6 +2086,50 @@ Content-Type: application/json
     },
     "timestamp": "2024-01-15T10:30:00"
 }
+```
+
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Pre-request Script: Vérifier si le token existe
+if (!pm.environment.get("token")) {
+    console.log("Warning: No token found. Please login first.");
+}
+
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier la structure de la réponse
+pm.test("Response contains user object", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('status');
+    pm.expect(jsonData).to.have.property('user');
+    pm.expect(jsonData.user).to.be.an('object');
+});
+
+// Test 4: Vérifier les champs de l'utilisateur
+pm.test("User has required fields", function () {
+    var jsonData = pm.response.json();
+    var user = jsonData.user;
+    pm.expect(user).to.have.property('id');
+    pm.expect(user).to.have.property('name');
+    pm.expect(user).to.have.property('email');
+    pm.expect(user).to.have.property('role');
+});
+
+// Test 5: Vérifier que l'ID correspond
+pm.test("User ID matches request", function () {
+    var jsonData = pm.response.json();
+    var urlParts = pm.request.url.toString().split('/');
+    var requestedId = urlParts[urlParts.length - 1];
+    pm.expect(jsonData.user.id.toString()).to.eql(requestedId);
+});
 ```
 
 ---
@@ -1235,6 +2179,38 @@ Content-Type: application/json
 }
 ```
 
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Pre-request Script: Vérifier si le token existe
+if (!pm.environment.get("token")) {
+    console.log("Warning: No token found. Please login first.");
+}
+
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier le message de succès
+pm.test("User update message is correct", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+    pm.expect(jsonData.message).to.eql("User successfully updated");
+});
+
+// Test 4: Vérifier la structure de la réponse
+pm.test("Response has status and message", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('status');
+    pm.expect(jsonData).to.have.property('message');
+});
+```
+
 ---
 
 ### 6.4. Delete User (ADMIN only)
@@ -1259,6 +2235,38 @@ Content-Type: application/json
     "message": "User successfully Deleted",
     "timestamp": "2024-01-15T10:30:00"
 }
+```
+
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Pre-request Script: Vérifier si le token existe
+if (!pm.environment.get("token")) {
+    console.log("Warning: No token found. Please login first.");
+}
+
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier le message de succès
+pm.test("User delete message is correct", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.status).to.eql(200);
+    pm.expect(jsonData.message).to.eql("User successfully Deleted");
+});
+
+// Test 4: Vérifier la structure de la réponse
+pm.test("Response has status and message", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('status');
+    pm.expect(jsonData).to.have.property('message');
+});
 ```
 
 ---
@@ -1302,6 +2310,53 @@ Content-Type: application/json
 }
 ```
 
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Pre-request Script: Vérifier si le token existe
+if (!pm.environment.get("token")) {
+    console.log("Warning: No token found. Please login first.");
+}
+
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier la structure de la réponse
+pm.test("Response contains user and transactions", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('status');
+    pm.expect(jsonData).to.have.property('user');
+    pm.expect(jsonData.user).to.have.property('transactions');
+    pm.expect(jsonData.user.transactions).to.be.an('array');
+});
+
+// Test 4: Vérifier les champs de l'utilisateur
+pm.test("User has required fields", function () {
+    var jsonData = pm.response.json();
+    var user = jsonData.user;
+    pm.expect(user).to.have.property('id');
+    pm.expect(user).to.have.property('name');
+    pm.expect(user).to.have.property('email');
+});
+
+// Test 5: Vérifier la structure des transactions
+pm.test("Transactions have required fields", function () {
+    var jsonData = pm.response.json();
+    if (jsonData.user.transactions && jsonData.user.transactions.length > 0) {
+        var transaction = jsonData.user.transactions[0];
+        pm.expect(transaction).to.have.property('id');
+        pm.expect(transaction).to.have.property('transactionType');
+        pm.expect(transaction).to.have.property('status');
+    }
+});
+```
+
 ---
 
 ### 6.6. Get Current User
@@ -1327,6 +2382,47 @@ Content-Type: application/json
     "role": "MANAGER",
     "createdAt": "2024-01-15T10:30:00"
 }
+```
+
+**Scripts Postman (Tests Tab)** :
+```javascript
+// Pre-request Script: Vérifier si le token existe
+if (!pm.environment.get("token")) {
+    console.log("Warning: No token found. Please login first.");
+}
+
+// Test 1: Vérifier le statut HTTP
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Test 2: Vérifier le format JSON
+pm.test("Response is JSON", function () {
+    pm.response.to.be.json;
+});
+
+// Test 3: Vérifier la structure de la réponse
+pm.test("Response contains user object", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('id');
+    pm.expect(jsonData).to.have.property('email');
+    pm.expect(jsonData).to.have.property('name');
+});
+
+// Test 4: Vérifier que l'email correspond au token
+pm.test("User email matches token", function () {
+    var jsonData = pm.response.json();
+    // L'email devrait correspondre à celui utilisé pour le login
+    pm.expect(jsonData.email).to.be.a('string');
+    pm.expect(jsonData.email).to.include('@');
+});
+
+// Test 5: Vérifier les champs requis
+pm.test("User has required fields", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('role');
+    pm.expect(jsonData).to.have.property('phoneNumber');
+});
 ```
 
 ---
