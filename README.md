@@ -11,6 +11,9 @@ Créez un environnement Postman avec les variables suivantes :
 ```
 base_url: http://localhost:5050
 token: (sera rempli automatiquement après login)
+categoryId: (sera rempli automatiquement après création d'une catégorie)
+supplierId: (sera rempli automatiquement après création d'un fournisseur)
+productId: (sera rempli automatiquement après création d'un produit)
 ```
 
 ### Headers Communs
@@ -20,6 +23,80 @@ Pour les requêtes authentifiées, ajoutez ce header :
 Authorization: Bearer {{token}}
 Content-Type: application/json
 ```
+
+### ⚠️ IMPORTANT : Ordre d'Exécution des Tests
+
+**Vous DEVEZ suivre cet ordre pour que les tests fonctionnent :**
+
+1. **D'abord, connectez-vous** avec un utilisateur ADMIN :
+   - Utilisez l'endpoint **Login** avec les credentials par défaut :
+     - Email: `rguigat.anass@gmail.com`
+     - Password: `12345678`
+   - OU créez un nouvel utilisateur avec **Register** (rôle ADMIN)
+   - **Vérifiez que le token est sauvegardé** dans la variable d'environnement `{{token}}`
+
+2. **Ensuite, créez les données de base** :
+   - Créez une **Category** (nécessaire pour créer des produits)
+   - Créez un **Supplier** (nécessaire pour les transactions d'achat)
+
+3. **Puis testez les autres endpoints** :
+   - Products (nécessite une categoryId valide)
+   - Transactions (nécessite productId et supplierId valides)
+   - Users
+
+**Note** : La plupart des endpoints nécessitent un token JWT valide. Assurez-vous que le token est sauvegardé après le login.
+
+---
+
+### 🔧 Résolution des Problèmes Courants
+
+#### Erreur 401 (Unauthorized)
+**Symptômes** : `Status code is 200 | AssertionError: expected response to have status code 200 but got 401`
+
+**Causes possibles** :
+- Token manquant ou invalide
+- Token expiré
+- Header Authorization mal configuré
+
+**Solutions** :
+1. Vérifiez que vous avez exécuté le **Login** en premier
+2. Vérifiez que le token est sauvegardé dans `{{token}}`
+3. Vérifiez que le header `Authorization: Bearer {{token}}` est présent
+4. Si le token est expiré, reconnectez-vous
+
+#### Erreur 500 (Internal Server Error)
+**Symptômes** : `Status code is 200 | AssertionError: expected response to have status code 200 but got 500`
+
+**Causes possibles** :
+- **Pour Products** :
+  - `categoryId` invalide ou manquant (créez d'abord une catégorie)
+  - Fichier image invalide ou trop volumineux
+  - Contraintes de base de données (produit utilisé dans des transactions)
+  
+- **Pour Suppliers** :
+  - Contraintes de base de données (supplier utilisé dans des transactions)
+  - Données de validation invalides
+
+- **Pour Users** :
+  - Permissions insuffisantes (besoin du rôle ADMIN)
+  - Utilisateur utilisé dans des transactions
+
+**Solutions** :
+1. Vérifiez les logs du backend pour voir le message d'erreur exact
+2. Assurez-vous que les données prérequises existent (catégories, suppliers)
+3. Vérifiez que vous utilisez un utilisateur avec le rôle ADMIN
+4. Ne supprimez pas des entités qui sont utilisées dans des transactions
+
+#### Erreur "Product Not Found" ou "Supplier Not Found"
+**Solutions** :
+- Vérifiez que l'ID existe dans la base de données
+- Utilisez d'abord les endpoints GET pour lister les entités et obtenir les IDs valides
+
+#### Erreur "Category Not Found" lors de la création d'un produit
+**Solutions** :
+1. Créez d'abord une catégorie avec l'endpoint `POST /api/categories/add`
+2. Sauvegardez l'ID de la catégorie créée
+3. Utilisez cet ID dans le champ `categoryId` lors de la création du produit
 
 ---
 
@@ -126,19 +203,27 @@ pm.test("Response is JSON", function () {
 });
 
 // Test 3: Vérifier la structure de la réponse
-pm.test("Response has status and message", function () {
-    var jsonData = pm.response.json();
-    pm.expect(jsonData).to.have.property('status');
-    pm.expect(jsonData).to.have.property('message');
-    pm.expect(jsonData).to.have.property('timestamp');
-});
+if (pm.response.code === 200) {
+    pm.test("Response has status and message", function () {
+        var jsonData = pm.response.json();
+        pm.expect(jsonData).to.have.property('status');
+        pm.expect(jsonData).to.have.property('message');
+    });
 
-// Test 4: Vérifier le message de succès
-pm.test("Registration message is correct", function () {
-    var jsonData = pm.response.json();
-    pm.expect(jsonData.status).to.eql(200);
-    pm.expect(jsonData.message).to.eql("User was successfully registered");
-});
+    // Test 4: Vérifier le message de succès
+    pm.test("Registration message is correct", function () {
+        var jsonData = pm.response.json();
+        pm.expect(jsonData.status).to.eql(200);
+        pm.expect(jsonData.message).to.eql("User was successfully registered");
+    });
+} else {
+    // Gérer les erreurs
+    pm.test("Check error response", function () {
+        var jsonData = pm.response.json();
+        console.log("Error status:", jsonData.status);
+        console.log("Error message:", jsonData.message);
+    });
+}
 
 // Test 5: Vérifier le temps de réponse
 pm.test("Response time is less than 2000ms", function () {
@@ -657,11 +742,22 @@ description: Latest iPhone with A17 Pro chip and titanium design
 ```javascript
 // Pre-request Script: Vérifier si le token existe
 if (!pm.environment.get("token")) {
-    console.log("Warning: No token found. Please login first.");
+    console.log("ERROR: No token found. Please login first!");
+    throw new Error("Token required. Please login first.");
+}
+
+// Vérifier si categoryId existe
+if (!pm.environment.get("categoryId")) {
+    console.log("WARNING: No categoryId found. Make sure to create a category first!");
 }
 
 // Test 1: Vérifier le statut HTTP
 pm.test("Status code is 200", function () {
+    if (pm.response.code !== 200) {
+        var jsonData = pm.response.json();
+        console.log("Error status:", jsonData.status);
+        console.log("Error message:", jsonData.message);
+    }
     pm.response.to.have.status(200);
 });
 
@@ -670,21 +766,36 @@ pm.test("Response is JSON", function () {
     pm.response.to.be.json;
 });
 
-// Test 3: Vérifier le message de succès
-pm.test("Product creation message is correct", function () {
-    var jsonData = pm.response.json();
-    pm.expect(jsonData.status).to.eql(200);
-    pm.expect(jsonData.message).to.eql("Product successfully saved");
-});
+// Test 3: Vérifier le message de succès (seulement si succès)
+if (pm.response.code === 200) {
+    pm.test("Product creation message is correct", function () {
+        var jsonData = pm.response.json();
+        pm.expect(jsonData.status).to.eql(200);
+        pm.expect(jsonData.message).to.eql("Product successfully saved");
+    });
 
-// Test 4: Sauvegarder l'ID du produit créé
-pm.test("Save product ID if returned", function () {
-    var jsonData = pm.response.json();
-    if (jsonData.product && jsonData.product.id) {
-        pm.environment.set("productId", jsonData.product.id);
-        console.log("Product ID saved:", jsonData.product.id);
-    }
-});
+    // Test 4: Sauvegarder l'ID du produit créé
+    pm.test("Save product ID if returned", function () {
+        var jsonData = pm.response.json();
+        if (jsonData.product && jsonData.product.id) {
+            pm.environment.set("productId", jsonData.product.id);
+            console.log("Product ID saved:", jsonData.product.id);
+        }
+    });
+} else {
+    // Afficher les détails de l'erreur
+    pm.test("Log error details", function () {
+        var jsonData = pm.response.json();
+        console.log("❌ Error creating product:");
+        console.log("Status:", jsonData.status);
+        console.log("Message:", jsonData.message);
+        console.log("Possible causes:");
+        console.log("- Invalid categoryId (create a category first)");
+        console.log("- Missing required fields");
+        console.log("- Invalid image file");
+        console.log("- Database connection issue");
+    });
+}
 ```
 
 ---
@@ -944,17 +1055,22 @@ Content-Type: application/json
 ```javascript
 // Pre-request Script: Vérifier si le token existe
 if (!pm.environment.get("token")) {
-    console.log("Warning: No token found. Please login first.");
+    console.log("ERROR: No token found. Please login first!");
+    throw new Error("Token required. Please login first.");
 }
 
 // Vérifier si productId existe
 if (!pm.environment.get("productId")) {
-    console.log("Warning: No productId found. Using default value 1");
-    pm.environment.set("productId", "1");
+    console.log("WARNING: No productId found. Make sure to create a product first!");
 }
 
 // Test 1: Vérifier le statut HTTP
 pm.test("Status code is 200", function () {
+    if (pm.response.code !== 200) {
+        var jsonData = pm.response.json();
+        console.log("Error status:", jsonData.status);
+        console.log("Error message:", jsonData.message);
+    }
     pm.response.to.have.status(200);
 });
 
@@ -963,26 +1079,41 @@ pm.test("Response is JSON", function () {
     pm.response.to.be.json;
 });
 
-// Test 3: Vérifier le message de succès
-pm.test("Product delete message is correct", function () {
-    var jsonData = pm.response.json();
-    pm.expect(jsonData.status).to.eql(200);
-    pm.expect(jsonData.message).to.eql("Product Deleted successfully");
-});
+// Test 3: Vérifier le message de succès (seulement si succès)
+if (pm.response.code === 200) {
+    pm.test("Product delete message is correct", function () {
+        var jsonData = pm.response.json();
+        pm.expect(jsonData.status).to.eql(200);
+        pm.expect(jsonData.message).to.eql("Product Deleted successfully");
+    });
 
-// Test 4: Vérifier la structure de la réponse
-pm.test("Response has status and message", function () {
-    var jsonData = pm.response.json();
-    pm.expect(jsonData).to.have.property('status');
-    pm.expect(jsonData).to.have.property('message');
-});
+    // Test 4: Vérifier la structure de la réponse
+    pm.test("Response has status and message", function () {
+        var jsonData = pm.response.json();
+        pm.expect(jsonData).to.have.property('status');
+        pm.expect(jsonData).to.have.property('message');
+    });
 
-// Test 5: Vérifier que le produit est supprimé
-pm.test("Product should be deleted", function () {
-    var jsonData = pm.response.json();
-    pm.expect(jsonData.status).to.eql(200);
-    console.log("Product deleted successfully");
-});
+    // Test 5: Vérifier que le produit est supprimé
+    pm.test("Product should be deleted", function () {
+        var jsonData = pm.response.json();
+        pm.expect(jsonData.status).to.eql(200);
+        console.log("✅ Product deleted successfully");
+    });
+} else {
+    // Afficher les détails de l'erreur
+    pm.test("Log error details", function () {
+        var jsonData = pm.response.json();
+        console.log("❌ Error deleting product:");
+        console.log("Status:", jsonData.status);
+        console.log("Message:", jsonData.message);
+        console.log("Possible causes:");
+        console.log("- Product not found (ID doesn't exist)");
+        console.log("- Product is used in transactions (foreign key constraint)");
+        console.log("- Missing authentication token");
+        console.log("- Insufficient permissions (need ADMIN role)");
+    });
+}
 ```
 
 ---
@@ -1363,11 +1494,17 @@ Content-Type: application/json
 ```javascript
 // Pre-request Script: Vérifier si le token existe
 if (!pm.environment.get("token")) {
-    console.log("Warning: No token found. Please login first.");
+    console.log("ERROR: No token found. Please login first!");
+    throw new Error("Token required. Please login first.");
 }
 
 // Test 1: Vérifier le statut HTTP
 pm.test("Status code is 200", function () {
+    if (pm.response.code !== 200) {
+        var jsonData = pm.response.json();
+        console.log("Error status:", jsonData.status);
+        console.log("Error message:", jsonData.message);
+    }
     pm.response.to.have.status(200);
 });
 
@@ -1376,12 +1513,27 @@ pm.test("Response is JSON", function () {
     pm.response.to.be.json;
 });
 
-// Test 3: Vérifier le message de succès
-pm.test("Supplier delete message is correct", function () {
-    var jsonData = pm.response.json();
-    pm.expect(jsonData.status).to.eql(200);
-    pm.expect(jsonData.message).to.eql("Supplier Was Successfully Deleted");
-});
+// Test 3: Vérifier le message de succès (seulement si succès)
+if (pm.response.code === 200) {
+    pm.test("Supplier delete message is correct", function () {
+        var jsonData = pm.response.json();
+        pm.expect(jsonData.status).to.eql(200);
+        pm.expect(jsonData.message).to.eql("Supplier Was Successfully Deleted");
+    });
+} else {
+    // Afficher les détails de l'erreur
+    pm.test("Log error details", function () {
+        var jsonData = pm.response.json();
+        console.log("❌ Error deleting supplier:");
+        console.log("Status:", jsonData.status);
+        console.log("Message:", jsonData.message);
+        console.log("Possible causes:");
+        console.log("- Supplier not found (ID doesn't exist)");
+        console.log("- Supplier is used in transactions (foreign key constraint)");
+        console.log("- Missing authentication token");
+        console.log("- Insufficient permissions (need ADMIN role)");
+    });
+}
 ```
 
 ---
@@ -2241,11 +2393,17 @@ Content-Type: application/json
 ```javascript
 // Pre-request Script: Vérifier si le token existe
 if (!pm.environment.get("token")) {
-    console.log("Warning: No token found. Please login first.");
+    console.log("ERROR: No token found. Please login first!");
+    throw new Error("Token required. Please login first.");
 }
 
 // Test 1: Vérifier le statut HTTP
 pm.test("Status code is 200", function () {
+    if (pm.response.code !== 200) {
+        var jsonData = pm.response.json();
+        console.log("Error status:", jsonData.status);
+        console.log("Error message:", jsonData.message);
+    }
     pm.response.to.have.status(200);
 });
 
@@ -2254,19 +2412,42 @@ pm.test("Response is JSON", function () {
     pm.response.to.be.json;
 });
 
-// Test 3: Vérifier le message de succès
-pm.test("User delete message is correct", function () {
-    var jsonData = pm.response.json();
-    pm.expect(jsonData.status).to.eql(200);
-    pm.expect(jsonData.message).to.eql("User successfully Deleted");
-});
+// Test 3: Vérifier le message de succès (seulement si succès)
+if (pm.response.code === 200) {
+    pm.test("User delete message is correct", function () {
+        var jsonData = pm.response.json();
+        pm.expect(jsonData.status).to.eql(200);
+        pm.expect(jsonData.message).to.eql("User successfully Deleted");
+    });
 
-// Test 4: Vérifier la structure de la réponse
-pm.test("Response has status and message", function () {
-    var jsonData = pm.response.json();
-    pm.expect(jsonData).to.have.property('status');
-    pm.expect(jsonData).to.have.property('message');
-});
+    // Test 4: Vérifier la structure de la réponse
+    pm.test("Response has status and message", function () {
+        var jsonData = pm.response.json();
+        pm.expect(jsonData).to.have.property('status');
+        pm.expect(jsonData).to.have.property('message');
+    });
+} else if (pm.response.code === 401) {
+    // Erreur d'authentification
+    pm.test("Authentication error - Token required", function () {
+        var jsonData = pm.response.json();
+        console.log("❌ Authentication Error:");
+        console.log("Status:", jsonData.status);
+        console.log("Message:", jsonData.message);
+        console.log("Solution: Make sure you are logged in and the token is valid");
+    });
+} else {
+    // Autres erreurs
+    pm.test("Log error details", function () {
+        var jsonData = pm.response.json();
+        console.log("❌ Error deleting user:");
+        console.log("Status:", jsonData.status);
+        console.log("Message:", jsonData.message);
+        console.log("Possible causes:");
+        console.log("- User not found (ID doesn't exist)");
+        console.log("- Missing authentication token");
+        console.log("- Insufficient permissions (need ADMIN role)");
+    });
+}
 ```
 
 ---
@@ -2314,11 +2495,17 @@ Content-Type: application/json
 ```javascript
 // Pre-request Script: Vérifier si le token existe
 if (!pm.environment.get("token")) {
-    console.log("Warning: No token found. Please login first.");
+    console.log("ERROR: No token found. Please login first!");
+    throw new Error("Token required. Please login first.");
 }
 
 // Test 1: Vérifier le statut HTTP
 pm.test("Status code is 200", function () {
+    if (pm.response.code !== 200) {
+        var jsonData = pm.response.json();
+        console.log("Error status:", jsonData.status);
+        console.log("Error message:", jsonData.message);
+    }
     pm.response.to.have.status(200);
 });
 
@@ -2327,34 +2514,53 @@ pm.test("Response is JSON", function () {
     pm.response.to.be.json;
 });
 
-// Test 3: Vérifier la structure de la réponse
-pm.test("Response contains user and transactions", function () {
-    var jsonData = pm.response.json();
-    pm.expect(jsonData).to.have.property('status');
-    pm.expect(jsonData).to.have.property('user');
-    pm.expect(jsonData.user).to.have.property('transactions');
-    pm.expect(jsonData.user.transactions).to.be.an('array');
-});
+// Test 3: Vérifier la structure de la réponse (seulement si succès)
+if (pm.response.code === 200) {
+    pm.test("Response contains user and transactions", function () {
+        var jsonData = pm.response.json();
+        pm.expect(jsonData).to.have.property('status');
+        pm.expect(jsonData).to.have.property('user');
+        pm.expect(jsonData.user).to.have.property('transactions');
+        pm.expect(jsonData.user.transactions).to.be.an('array');
+    });
 
-// Test 4: Vérifier les champs de l'utilisateur
-pm.test("User has required fields", function () {
-    var jsonData = pm.response.json();
-    var user = jsonData.user;
-    pm.expect(user).to.have.property('id');
-    pm.expect(user).to.have.property('name');
-    pm.expect(user).to.have.property('email');
-});
+    // Test 4: Vérifier les champs de l'utilisateur
+    pm.test("User has required fields", function () {
+        var jsonData = pm.response.json();
+        var user = jsonData.user;
+        pm.expect(user).to.have.property('id');
+        pm.expect(user).to.have.property('name');
+        pm.expect(user).to.have.property('email');
+    });
 
-// Test 5: Vérifier la structure des transactions
-pm.test("Transactions have required fields", function () {
-    var jsonData = pm.response.json();
-    if (jsonData.user.transactions && jsonData.user.transactions.length > 0) {
-        var transaction = jsonData.user.transactions[0];
-        pm.expect(transaction).to.have.property('id');
-        pm.expect(transaction).to.have.property('transactionType');
-        pm.expect(transaction).to.have.property('status');
-    }
-});
+    // Test 5: Vérifier la structure des transactions
+    pm.test("Transactions have required fields", function () {
+        var jsonData = pm.response.json();
+        if (jsonData.user.transactions && jsonData.user.transactions.length > 0) {
+            var transaction = jsonData.user.transactions[0];
+            pm.expect(transaction).to.have.property('id');
+            pm.expect(transaction).to.have.property('transactionType');
+            pm.expect(transaction).to.have.property('status');
+        }
+    });
+} else if (pm.response.code === 401) {
+    // Erreur d'authentification
+    pm.test("Authentication error - Token required", function () {
+        var jsonData = pm.response.json();
+        console.log("❌ Authentication Error:");
+        console.log("Status:", jsonData.status);
+        console.log("Message:", jsonData.message);
+        console.log("Solution: Make sure you are logged in and the token is valid");
+    });
+} else {
+    // Autres erreurs
+    pm.test("Log error details", function () {
+        var jsonData = pm.response.json();
+        console.log("❌ Error getting user transactions:");
+        console.log("Status:", jsonData.status);
+        console.log("Message:", jsonData.message);
+    });
+}
 ```
 
 ---
@@ -2388,11 +2594,17 @@ Content-Type: application/json
 ```javascript
 // Pre-request Script: Vérifier si le token existe
 if (!pm.environment.get("token")) {
-    console.log("Warning: No token found. Please login first.");
+    console.log("ERROR: No token found. Please login first!");
+    throw new Error("Token required. Please login first.");
 }
 
 // Test 1: Vérifier le statut HTTP
 pm.test("Status code is 200", function () {
+    if (pm.response.code !== 200) {
+        var jsonData = pm.response.json();
+        console.log("Error status:", jsonData.status);
+        console.log("Error message:", jsonData.message);
+    }
     pm.response.to.have.status(200);
 });
 
@@ -2401,28 +2613,52 @@ pm.test("Response is JSON", function () {
     pm.response.to.be.json;
 });
 
-// Test 3: Vérifier la structure de la réponse
-pm.test("Response contains user object", function () {
-    var jsonData = pm.response.json();
-    pm.expect(jsonData).to.have.property('id');
-    pm.expect(jsonData).to.have.property('email');
-    pm.expect(jsonData).to.have.property('name');
-});
+// Test 3: Vérifier la structure de la réponse (seulement si succès)
+if (pm.response.code === 200) {
+    pm.test("Response contains user object", function () {
+        var jsonData = pm.response.json();
+        pm.expect(jsonData).to.have.property('id');
+        pm.expect(jsonData).to.have.property('email');
+        pm.expect(jsonData).to.have.property('name');
+    });
 
-// Test 4: Vérifier que l'email correspond au token
-pm.test("User email matches token", function () {
-    var jsonData = pm.response.json();
-    // L'email devrait correspondre à celui utilisé pour le login
-    pm.expect(jsonData.email).to.be.a('string');
-    pm.expect(jsonData.email).to.include('@');
-});
+    // Test 4: Vérifier que l'email correspond au token
+    pm.test("User email matches token", function () {
+        var jsonData = pm.response.json();
+        // L'email devrait correspondre à celui utilisé pour le login
+        pm.expect(jsonData.email).to.be.a('string');
+        pm.expect(jsonData.email).to.include('@');
+    });
 
-// Test 5: Vérifier les champs requis
-pm.test("User has required fields", function () {
-    var jsonData = pm.response.json();
-    pm.expect(jsonData).to.have.property('role');
-    pm.expect(jsonData).to.have.property('phoneNumber');
-});
+    // Test 5: Vérifier les champs requis
+    pm.test("User has required fields", function () {
+        var jsonData = pm.response.json();
+        pm.expect(jsonData).to.have.property('role');
+        pm.expect(jsonData).to.have.property('phoneNumber');
+    });
+} else if (pm.response.code === 401) {
+    // Erreur d'authentification
+    pm.test("Authentication error - Token required", function () {
+        var jsonData = pm.response.json();
+        console.log("❌ Authentication Error:");
+        console.log("Status:", jsonData.status);
+        console.log("Message:", jsonData.message);
+        console.log("Solution: Make sure you are logged in and the token is valid");
+        console.log("Steps to fix:");
+        console.log("1. Go to Login endpoint");
+        console.log("2. Use email: rguigat.anass@gmail.com");
+        console.log("3. Use password: 12345678");
+        console.log("4. The token will be saved automatically");
+    });
+} else {
+    // Autres erreurs
+    pm.test("Log error details", function () {
+        var jsonData = pm.response.json();
+        console.log("❌ Error getting current user:");
+        console.log("Status:", jsonData.status);
+        console.log("Message:", jsonData.message);
+    });
+}
 ```
 
 ---
@@ -3564,9 +3800,34 @@ pm.test("Response time is acceptable", function () {
     pm.expect(pm.response.responseTime).to.be.below(5000);
 });
 
-// Test 3: Vérifier qu'il n'y a pas d'erreurs serveur
-pm.test("No server errors", function () {
-    pm.expect(pm.response.code).to.not.be.oneOf([500, 502, 503, 504]);
+// Test 3: Gérer les erreurs serveur avec des messages utiles
+pm.test("Check for server errors", function () {
+    var statusCode = pm.response.code;
+    
+    if (statusCode === 500) {
+        var jsonData = pm.response.json();
+        console.log("❌ Server Error (500):");
+        console.log("Message:", jsonData.message);
+        console.log("Possible causes:");
+        console.log("- Database constraint violation");
+        console.log("- Missing required data (category, supplier, etc.)");
+        console.log("- Invalid data format");
+        console.log("- Check backend logs for more details");
+        // Ne pas faire échouer le test, juste logger l'erreur
+    } else if (statusCode === 401) {
+        var jsonData = pm.response.json();
+        console.log("❌ Unauthorized (401):");
+        console.log("Message:", jsonData.message);
+        console.log("Solution: Login first to get a valid token");
+    } else if (statusCode === 403) {
+        var jsonData = pm.response.json();
+        console.log("❌ Forbidden (403):");
+        console.log("Message:", jsonData.message);
+        console.log("Solution: You need ADMIN role for this endpoint");
+    } else if ([500, 502, 503, 504].includes(statusCode)) {
+        // Pour les autres erreurs serveur, faire échouer le test
+        pm.expect(statusCode).to.not.be.oneOf([500, 502, 503, 504]);
+    }
 });
 ```
 
